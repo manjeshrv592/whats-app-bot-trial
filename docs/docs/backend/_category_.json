@@ -1,0 +1,8 @@
+{
+  "label": "Backend",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "The Express server that runs the WhatsApp bot and serves the admin API."
+  }
+}

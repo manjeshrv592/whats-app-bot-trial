@@ -1,0 +1,8 @@
+{
+  "label": "Database",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "The Postgres schema — survey data, conversation state, and admin auth."
+  }
+}

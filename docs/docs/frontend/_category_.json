@@ -1,0 +1,8 @@
+{
+  "label": "Frontend",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "The admin-frontend dashboard — React, Vite, shadcn/ui."
+  }
+}

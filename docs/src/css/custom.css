@@ -1,0 +1,26 @@
+/**
+ * Global CSS overrides. The classic template bundles Infima by default.
+ */
+
+:root {
+  --ifm-color-primary: #6366f1;
+  --ifm-color-primary-dark: #4f52ee;
+  --ifm-color-primary-darker: #4245ed;
+  --ifm-color-primary-darkest: #2225d6;
+  --ifm-color-primary-light: #7779f3;
+  --ifm-color-primary-lighter: #8385f4;
+  --ifm-color-primary-lightest: #a7a8f8;
+  --ifm-code-font-size: 90%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #8b8cf6;
+  --ifm-color-primary-dark: #7274f4;
+  --ifm-color-primary-darker: #6567f3;
+  --ifm-color-primary-darkest: #3f41ee;
+  --ifm-color-primary-light: #a4a5f8;
+  --ifm-color-primary-lighter: #b1b2f9;
+  --ifm-color-primary-lightest: #d8d8fc;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
