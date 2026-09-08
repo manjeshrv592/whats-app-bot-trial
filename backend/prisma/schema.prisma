@@ -1,0 +1,123 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 Int      @id @default(autoincrement())
+  phoneNumber        String   @unique @map("phone_number")
+  language           String?
+  consented          Boolean?
+  name               String?
+  travelFrequency    String?  @map("travel_frequency")
+  homeArea           String?  @map("home_area")
+  originLat          Float?   @map("origin_lat")
+  originLng          Float?   @map("origin_lng")
+  nearestStation     String?  @map("nearest_station")
+  feederMode         String?  @map("feeder_mode")
+  destinationStation String?  @map("destination_station")
+  distributionMode   String?  @map("distribution_mode")
+  destinationArea    String?  @map("destination_area")
+  destLat            Float?   @map("dest_lat")
+  destLng            Float?   @map("dest_lng")
+  email              String?
+  smartCardNumber    String?  @map("smart_card_number")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  session          Session?
+  conversationLogs ConversationLog[]
+
+  @@map("users")
+}
+
+model Session {
+  id          Int      @id @default(autoincrement())
+  phoneNumber String   @unique @map("phone_number")
+  currentStep String   @map("current_step")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [phoneNumber], references: [phoneNumber])
+
+  @@map("sessions")
+}
+
+model ConversationLog {
+  id          Int      @id @default(autoincrement())
+  phoneNumber String   @map("phone_number")
+  direction   String
+  messageText String   @map("message_text")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [phoneNumber], references: [phoneNumber])
+
+  @@map("conversation_logs")
+}
+
+model AdminUser {
+  id            String         @id
+  name          String
+  email         String
+  emailVerified Boolean        @default(false)
+  image         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  adminsessions AdminSession[]
+  adminaccounts AdminAccount[]
+
+  @@unique([email])
+  @@map("AdminUser")
+}
+
+model AdminSession {
+  id        String    @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  adminuser AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("AdminSession")
+}
+
+model AdminAccount {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  adminuser             AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("AdminAccount")
+}
+
+model AdminVerification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("AdminVerification")
+}
