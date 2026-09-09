@@ -1,4 +1,4 @@
-import { Check, CheckCheck, Phone, Video } from "lucide-react";
+import { Check, CheckCheck } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 function formatTime(iso) {
@@ -33,8 +33,6 @@ export function WhatsAppTranscript({ logs, name, phoneNumber }) {
           <p className="truncate text-sm font-medium">{name || "Survey respondent"}</p>
           <p className="truncate text-[11px] text-white/70">{phoneNumber}</p>
         </div>
-        <Video className="size-4 text-white/80" />
-        <Phone className="size-4 text-white/80" />
       </div>
 
       {/* Chat body */}
