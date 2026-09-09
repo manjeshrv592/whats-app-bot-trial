@@ -51,6 +51,7 @@ Each entry in `STEPS` declares:
 | `skipSaveWhen(answerId)` | Optional — for list steps with an "Others" row, skip saving the placeholder id since the next step (a `_OTHER` text step) will overwrite it with the real value |
 | `validate(value)` | Optional — e.g. `ASK_EMAIL` regex-validates before advancing |
 | `vars(user)` | Optional — template variables for the prompt, e.g. `` `"Awesome {name}! Let's begin."` `` |
+| `dynamicOptions(user, language)` | Optional — computes list rows at send/validate time instead of using the static `CONTENT` option set; return `null` to fall back to the static list. See [Dynamic nearest-station suggestions](#dynamic-nearest-station-suggestions) below. |
 
 ```js title="backend/src/flow/conversation.js — a representative slice"
 ASK_NEAREST_STATION: {
@@ -76,15 +77,16 @@ ASK_LANGUAGE → ASK_CONSENT →(NO)→ CANCELLED
              → ASK_SHARE_ORIGIN_GEO →(YES)→ ASK_ORIGIN_LOCATION ─┐
                                     →(NO)──────────────────────┴→ ASK_NEAREST_STATION (→ _OTHER if "Others")
              → ASK_FEEDER_MODE (→ _OTHER if "Others")
-             → ASK_DESTINATION_STATION (→ _OTHER if "Others")
-             → ASK_DISTRIBUTION_MODE (→ _OTHER if "Others")
              → ASK_DEST_AREA
              → ASK_SHARE_DEST_GEO →(YES)→ ASK_DEST_LOCATION ─┐
-                                  →(NO)─────────────────────┴→ ASK_EMAIL
-             → ASK_SMART_CARD → DONE
+                                  →(NO)─────────────────────┴→ ASK_DESTINATION_STATION (→ _OTHER if "Others")
+             → ASK_DISTRIBUTION_MODE (→ _OTHER if "Others")
+             → ASK_EMAIL → ASK_SMART_CARD → DONE
 ```
 
 `ASK_LANGUAGE` isn't in the `STEPS` table — it's a special bootstrap case (see below), since its prompt shows both languages at once (we don't know the user's preference yet).
+
+Note the destination side mirrors the origin side's shape on purpose (area → share geo? → location → station picker) — the destination sequence was reordered from an earlier version (which asked "which destination station?" before asking for destination location) specifically so dynamic nearest-station suggestions could work on both legs, not just the origin. See below.
 
 ## `handleIncomingMessage(phoneNumber, input)` — the interpreter
 
@@ -104,6 +106,29 @@ Walking through what happens on each call:
 8. **Everything else**: save the answer to `step.field` (unless `skipSaveWhen` says not to), compute `next()`, persist `session.currentStep`, and render that next step's prompt.
 
 The reply shape returned all the way up is a **send spec** — `{ kind: "text" | "buttons" | "list", body, buttons?, rows?, buttonLabel? }` — which `webhook.js` dispatches to the matching `services/whatsapp.js` function. `conversation.js` never imports the WhatsApp service directly; it only describes *what* to send.
+
+## Dynamic nearest-station suggestions
+
+`ASK_NEAREST_STATION` and `ASK_DESTINATION_STATION` don't always show the same fixed 6-station list — if the respondent has shared their location (origin or destination respectively), they instead see the **4 actual nearest Namma Metro stations** (by straight-line distance) plus an "Others" row.
+
+- `backend/src/flow/stations.js` — all 83 Namma Metro stations (name, line, lat/lng), a plain static data file.
+- `backend/src/flow/geo.js` — `haversineDistanceKm()` (great-circle distance between two lat/lng points) and `getNearestStations()`, pure math, no external API. This is straight-line distance, not actual travel distance — a deliberate, standard simplification rather than paying for a routing API for marginal accuracy gain.
+- `nearestStationRows(user, language, latField, lngField)` in `conversation.js` — returns the 4 nearest + Others as WhatsApp list rows, or `null` if the relevant lat/lng fields aren't set on the user yet (i.e. they haven't shared that location), which is what triggers the static-list fallback.
+
+```js title="backend/src/flow/conversation.js"
+ASK_NEAREST_STATION: {
+  ...,
+  dynamicOptions: (user, language) => nearestStationRows(user, language, "originLat", "originLng"),
+},
+ASK_DESTINATION_STATION: {
+  ...,
+  dynamicOptions: (user, language) => nearestStationRows(user, language, "destLat", "destLng"),
+},
+```
+
+**Why one `resolveStepOptions()` helper matters here**: the same computed row list has to be used both when the message is *sent* (`renderStep`) and when the reply is *validated* (`validateInput`, and `buildMismatchReply` if the reply was invalid) — since the row `id`s are the station's own id (e.g. `"BLR-M016"`), not a small fixed enum, sending one list and validating against a different one would silently break every dynamic-list reply. All three call through `resolveStepOptions(step, user, language)`, which is dynamic-if-available-else-static, so this can't drift.
+
+A handful of official station names exceed WhatsApp's 24-character list row title limit (e.g. "Krantivira Sangolli Rayanna Railway Station") — `stationToRow()` truncates the title with an ellipsis and always puts the full name (+ line) in the row's `description` (capped at 72 chars) so nothing is actually lost from the user's perspective.
 
 ## Restart / greeting handling gap
 

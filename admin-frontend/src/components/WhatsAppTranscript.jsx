@@ -54,27 +54,23 @@ export function WhatsAppTranscript({ logs, name, phoneNumber }) {
         )}
 
         {logs?.map((log) => {
-          const isRespondent = log.direction === "in";
+          const isBot = log.direction === "out";
           return (
             <div
               key={log.id}
-              className={`flex ${isRespondent ? "justify-end" : "justify-start"}`}
+              className={`flex ${isBot ? "justify-end" : "justify-start"}`}
             >
               <div
                 className={`max-w-[75%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed shadow-sm ${
-                  isRespondent
+                  isBot
                     ? "rounded-tr-sm bg-[#DCF8C6] text-neutral-800"
                     : "rounded-tl-sm bg-white text-neutral-800"
                 }`}
               >
                 <p className="whitespace-pre-wrap break-words">{log.messageText}</p>
-                <div
-                  className={`mt-1 flex items-center gap-1 text-[10px] text-neutral-500 ${
-                    isRespondent ? "justify-end" : "justify-end"
-                  }`}
-                >
+                <div className="mt-1 flex items-center justify-end gap-1 text-[10px] text-neutral-500">
                   <span>{formatTime(log.createdAt)}</span>
-                  {isRespondent ? (
+                  {isBot ? (
                     <CheckCheck className="size-3.5 text-neutral-400" />
                   ) : (
                     <Check className="size-3.5 text-neutral-400" />

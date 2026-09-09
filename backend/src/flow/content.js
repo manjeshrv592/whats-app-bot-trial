@@ -209,8 +209,8 @@ const CONTENT = {
   },
 
   askSmartCard: {
-    en: { body: "Now, please share your Transit Smart Card number so that we can redeem your bonus points for completing this survey." },
-    kn: { body: "ಈಗ, ಈ ಸಮೀಕ್ಷೆ ಪೂರ್ಣಗೊಳಿಸಿದ್ದಕ್ಕಾಗಿ ನಿಮ್ಮ ಬೋನಸ್ ಪಾಯಿಂಟ್‌ಗಳನ್ನು ರಿಡೀಮ್ ಮಾಡಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ ಟ್ರಾನ್ಸಿಟ್ ಸ್ಮಾರ್ಟ್ ಕಾರ್ಡ್ ಸಂಖ್ಯೆಯನ್ನು ಹಂಚಿಕೊಳ್ಳಿ." },
+    en: { body: "Now, please share your 11-digit Transit Smart Card number so that we can redeem your bonus points for completing this survey." },
+    kn: { body: "ಈಗ, ಈ ಸಮೀಕ್ಷೆ ಪೂರ್ಣಗೊಳಿಸಿದ್ದಕ್ಕಾಗಿ ನಿಮ್ಮ ಬೋನಸ್ ಪಾಯಿಂಟ್‌ಗಳನ್ನು ರಿಡೀಮ್ ಮಾಡಲು ದಯವಿಟ್ಟು ನಿಮ್ಮ 11-ಅಂಕಿಯ ಟ್ರಾನ್ಸಿಟ್ ಸ್ಮಾರ್ಟ್ ಕಾರ್ಡ್ ಸಂಖ್ಯೆಯನ್ನು ಹಂಚಿಕೊಳ್ಳಿ." },
   },
 
   done: {
@@ -241,6 +241,11 @@ const CONTENT = {
   invalidEmail: {
     en: { body: "That doesn't look like a valid email address. Please try again." },
     kn: { body: "ಅದು ಮಾನ್ಯ ಇಮೇಲ್ ವಿಳಾಸದಂತೆ ಕಾಣುತ್ತಿಲ್ಲ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ." },
+  },
+
+  invalidSmartCard: {
+    en: { body: "That doesn't look like a valid Smart Card number. Please enter exactly 11 digits, numbers only." },
+    kn: { body: "ಅದು ಮಾನ್ಯ ಸ್ಮಾರ್ಟ್ ಕಾರ್ಡ್ ಸಂಖ್ಯೆಯಂತೆ ಕಾಣುತ್ತಿಲ್ಲ. ದಯವಿಟ್ಟು ನಿಖರವಾಗಿ 11 ಅಂಕೆಗಳನ್ನು ಮಾತ್ರ ನಮೂದಿಸಿ." },
   },
 };
 

@@ -1,7 +1,38 @@
 const prisma = require("../services/db");
 const { CONTENT, render } = require("./content");
+const { METRO_STATIONS } = require("./stations");
+const { getNearestStations } = require("./geo");
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SMART_CARD_REGEX = /^\d{11}$/;
+const MAX_ROW_TITLE_LENGTH = 24;
+
+// WhatsApp list row titles are capped at 24 chars; the full name always
+// survives in `description` (capped at 72) so nothing is lost either way.
+function stationToRow(station) {
+  const title =
+    station.name.length <= MAX_ROW_TITLE_LENGTH
+      ? station.name
+      : `${station.name.slice(0, MAX_ROW_TITLE_LENGTH - 1)}…`;
+  const description = `${station.name} · ${station.line}`.slice(0, 72);
+  return { id: station.id, title, description };
+}
+
+function othersRow(language) {
+  return { id: "OTHERS", title: language === "kn" ? "ಇತರೆ" : "Others" };
+}
+
+// Returns the 4 nearest stations (+ Others) if the given lat/lng fields are
+// set on the user, or null if location hasn't been shared — callers fall
+// back to the static station list in that case.
+function nearestStationRows(user, language, latField, lngField) {
+  const lat = user[latField];
+  const lng = user[lngField];
+  if (lat == null || lng == null) return null;
+
+  const nearest = getNearestStations(lat, lng, METRO_STATIONS, 4);
+  return [...nearest.map(stationToRow), othersRow(language)];
+}
 
 // Each step: contentKey into CONTENT, expected input `type`, the User `field`
 // it saves to (if any), and `next(answerId, user)` to compute the following step.
@@ -44,6 +75,7 @@ const STEPS = {
     contentKey: "askNearestStation",
     type: "list",
     field: "nearestStation",
+    dynamicOptions: (user, language) => nearestStationRows(user, language, "originLat", "originLng"),
     skipSaveWhen: (id) => id === "OTHERS",
     next: (answerId) => (answerId === "OTHERS" ? "ASK_NEAREST_STATION_OTHER" : "ASK_FEEDER_MODE"),
   },
@@ -58,18 +90,36 @@ const STEPS = {
     type: "list",
     field: "feederMode",
     skipSaveWhen: (id) => id === "OTHERS",
-    next: (answerId) => (answerId === "OTHERS" ? "ASK_FEEDER_MODE_OTHER" : "ASK_DESTINATION_STATION"),
+    next: (answerId) => (answerId === "OTHERS" ? "ASK_FEEDER_MODE_OTHER" : "ASK_DEST_AREA"),
   },
   ASK_FEEDER_MODE_OTHER: {
     contentKey: "askFeederModeOther",
     type: "text",
     field: "feederMode",
+    next: () => "ASK_DEST_AREA",
+  },
+  ASK_DEST_AREA: {
+    contentKey: "askDestArea",
+    type: "text",
+    field: "destinationArea",
+    next: () => "ASK_SHARE_DEST_GEO",
+  },
+  ASK_SHARE_DEST_GEO: {
+    contentKey: "askShareDestGeo",
+    type: "buttons",
+    next: (answerId) => (answerId === "YES" ? "ASK_DEST_LOCATION" : "ASK_DESTINATION_STATION"),
+  },
+  ASK_DEST_LOCATION: {
+    contentKey: "askDestLocation",
+    type: "location",
+    locationFields: ["destLat", "destLng"],
     next: () => "ASK_DESTINATION_STATION",
   },
   ASK_DESTINATION_STATION: {
     contentKey: "askDestinationStation",
     type: "list",
     field: "destinationStation",
+    dynamicOptions: (user, language) => nearestStationRows(user, language, "destLat", "destLng"),
     skipSaveWhen: (id) => id === "OTHERS",
     next: (answerId) => (answerId === "OTHERS" ? "ASK_DESTINATION_STATION_OTHER" : "ASK_DISTRIBUTION_MODE"),
   },
@@ -84,29 +134,12 @@ const STEPS = {
     type: "list",
     field: "distributionMode",
     skipSaveWhen: (id) => id === "OTHERS",
-    next: (answerId) => (answerId === "OTHERS" ? "ASK_DISTRIBUTION_MODE_OTHER" : "ASK_DEST_AREA"),
+    next: (answerId) => (answerId === "OTHERS" ? "ASK_DISTRIBUTION_MODE_OTHER" : "ASK_EMAIL"),
   },
   ASK_DISTRIBUTION_MODE_OTHER: {
     contentKey: "askDistributionModeOther",
     type: "text",
     field: "distributionMode",
-    next: () => "ASK_DEST_AREA",
-  },
-  ASK_DEST_AREA: {
-    contentKey: "askDestArea",
-    type: "text",
-    field: "destinationArea",
-    next: () => "ASK_SHARE_DEST_GEO",
-  },
-  ASK_SHARE_DEST_GEO: {
-    contentKey: "askShareDestGeo",
-    type: "buttons",
-    next: (answerId) => (answerId === "YES" ? "ASK_DEST_LOCATION" : "ASK_EMAIL"),
-  },
-  ASK_DEST_LOCATION: {
-    contentKey: "askDestLocation",
-    type: "location",
-    locationFields: ["destLat", "destLng"],
     next: () => "ASK_EMAIL",
   },
   ASK_EMAIL: {
@@ -121,6 +154,8 @@ const STEPS = {
     contentKey: "askSmartCard",
     type: "text",
     field: "smartCardNumber",
+    validate: (value) => SMART_CARD_REGEX.test(value),
+    invalidValueContentKey: "invalidSmartCard",
     next: () => "DONE",
   },
 };
@@ -143,15 +178,27 @@ function textReply(contentKey, language, vars = {}) {
   return toSendSpec(render(contentKey, language, vars), "text", language);
 }
 
+// Dynamic-if-available-else-static — the single source of truth for a step's
+// options, used whenever we send a list/buttons message AND whenever we
+// validate the reply against it, so the two never drift apart.
+function resolveStepOptions(step, user, language) {
+  if (step.dynamicOptions) {
+    const dynamic = step.dynamicOptions(user, language);
+    if (dynamic) return dynamic;
+  }
+  return render(step.contentKey, language, {}).options;
+}
+
 function renderStep(stepKey, language, user) {
   if (stepKey === "DONE") return textReply("done", language);
   const step = STEPS[stepKey];
   const vars = step.vars ? step.vars(user) : {};
   const rendered = render(step.contentKey, language, vars);
-  return toSendSpec(rendered, step.type, language);
+  const options = resolveStepOptions(step, user, language);
+  return toSendSpec({ body: rendered.body, options }, step.type, language);
 }
 
-function validateInput(step, input, language) {
+function validateInput(step, input, language, user) {
   if (step.type === "text") {
     let textValue = null;
     if (input.type === "text") textValue = input.value.trim();
@@ -165,8 +212,8 @@ function validateInput(step, input, language) {
 
   if (step.type === "buttons" || step.type === "list") {
     if (input.type !== "interactive") return { ok: false, reason: "expected_choice" };
-    const rendered = render(step.contentKey, language, {});
-    const match = (rendered.options || []).find((o) => o.id === input.id);
+    const options = resolveStepOptions(step, user, language);
+    const match = (options || []).find((o) => o.id === input.id);
     if (!match) return { ok: false, reason: "expected_choice" };
     return { ok: true, answerId: input.id, answerTitle: input.title || match.title };
   }
@@ -182,6 +229,7 @@ function validateInput(step, input, language) {
 function buildMismatchReply(step, language, reason, user) {
   const vars = step.vars ? step.vars(user) : {};
   const rendered = render(step.contentKey, language, vars);
+  const options = resolveStepOptions(step, user, language);
 
   let nudgeKey;
   if (reason === "expected_location") nudgeKey = "pleaseShareLocation";
@@ -190,7 +238,7 @@ function buildMismatchReply(step, language, reason, user) {
 
   const nudge = CONTENT[nudgeKey][language].body;
   const body = `${nudge}\n\n${rendered.body}`;
-  return toSendSpec({ body, options: rendered.options }, step.type, language);
+  return toSendSpec({ body, options }, step.type, language);
 }
 
 async function handleIncomingMessage(phoneNumber, input) {
@@ -224,7 +272,7 @@ async function handleIncomingMessage(phoneNumber, input) {
   }
 
   const step = STEPS[currentStep];
-  const validation = validateInput(step, input, language);
+  const validation = validateInput(step, input, language, user);
 
   if (!validation.ok) {
     return buildMismatchReply(step, language, validation.reason, user);
