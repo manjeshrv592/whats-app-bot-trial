@@ -49,6 +49,7 @@ Copy `.env.example` to `.env` and fill in every value. Here's what each one is f
 | `WHATSAPP_VERIFY_TOKEN` | A string you choose yourself; Meta echoes it back during webhook verification |
 | `WHATSAPP_WA_LINK_NUMBER` | The actual WhatsApp number in international format (no `+`), used to build the `wa.me` QR code link |
 | `WHATSAPP_WA_LINK_TEXT` | The pre-filled message the QR code opens WhatsApp with (default `Hi`, which triggers the bot's greeting) |
+| `ALLOW_MULTIPLE_SUBMISSIONS` | `true`/`false` (default `false`). When `true`, a respondent who already completed (or cancelled) gets a fresh survey on their next message instead of "you've already completed it" — see [Known Limitations](./known-limitations.md) |
 | `PORT` | Express server port (default `3000`) |
 | `BETTER_AUTH_SECRET` | Random secret Better Auth uses to sign sessions — generate with `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 | `BETTER_AUTH_URL` | The backend's own base URL (`http://localhost:3000` locally) |
@@ -93,6 +94,18 @@ npm run qr
 ```
 
 This writes `backend/qr-code.png` — a click-to-chat card that opens WhatsApp with the greeting pre-filled, immediately starting the survey.
+
+### Optional: seed a realistic dataset for the dashboard
+
+A handful of real responses makes every chart on the admin dashboard look flat. Two scripts bulk-insert synthetic data instead (wiping `ConversationLog`/`Session`/`User` first, leaving `AdminUser` login data untouched):
+
+```bash
+node scripts/seed-test-data.js       # ~45 rows, a few WhatsApp-style transcripts — quick UI smoke test
+node scripts/seed-large-dataset.js   # thousands of rows over a 6-month span, with real-looking
+                                      # growth/weekday/commute-hour/station-popularity patterns
+```
+
+See [Analytics Dashboard](./frontend/analytics-dashboard.md) for what the dashboard does with this data.
 
 ## 4. Admin frontend setup
 

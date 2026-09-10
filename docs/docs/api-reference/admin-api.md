@@ -11,6 +11,66 @@ sidebar_position: 3
 { "error": "Unauthorized" }
 ```
 
+## `GET /api/admin/stats`
+
+Aggregate counts for the dashboard's four stat cards, computed with `prisma.user.count()` and `prisma.session.groupBy()` — actual database aggregates, not a count of whatever page of `/responses` happens to be loaded (see [Analytics Dashboard](../frontend/analytics-dashboard.md) for why that distinction mattered in practice).
+
+**Response** — real example, captured from a seeded dataset of ~8,700 responses:
+
+```json
+{
+  "total": 8727,
+  "completed": 6830,
+  "inProgress": 895,
+  "declined": 1002,
+  "notStarted": 0
+}
+```
+
+`notStarted` is `total` minus every `User` row that has a `Session` at all — in practice always `0`, since a `Session` is created on a respondent's very first message (see [Conversation Engine](../backend/conversation-engine.md)), but computed rather than assumed in case that ever changes.
+
+## `GET /api/admin/analytics`
+
+Six pre-aggregated datasets, one per chart on the Overview dashboard. All computed in `backend/src/services/analytics.js` — see [Analytics Dashboard](../frontend/analytics-dashboard.md) for the two non-obvious things this endpoint handles: merging bilingual (English/Kannada) answers onto one label, and correcting a timezone offset in the time-bucketed fields.
+
+**Response shape**, with a real example for each field:
+
+```json
+{
+  "daily": [
+    { "day": "2026-03-15", "count": 12 },
+    { "day": "2026-03-16", "count": 24 }
+  ],
+  "stations": [
+    { "label": "Whitefield (Kadugodi)", "count": 1910 },
+    { "label": "Majestic (KSR)", "count": 1655 }
+  ],
+  "modes": [
+    { "label": "Walk", "feeder": 1513, "distribution": 1524 },
+    { "label": "Auto-rickshaw", "feeder": 1388, "distribution": 1345 }
+  ],
+  "frequency": [
+    { "label": "Daily", "count": 3429 },
+    { "label": "Few times a week", "count": 2361 }
+  ],
+  "hours": [
+    { "hour": 0, "count": 0 },
+    { "hour": 8, "count": 3830 },
+    { "hour": 18, "count": 2187 }
+  ],
+  "weekday": [
+    { "day": "Mon", "count": 1496 },
+    { "day": "Sat", "count": 671 }
+  ]
+}
+```
+
+- `daily` — every calendar day that has at least one response, oldest first (not zero-filled for gap days).
+- `stations` — top 8 only, English/Kannada answers for the same station already merged.
+- `modes` — `feeder` (home → nearest station) vs. `distribution` (station → final destination), for every mode either was ever answered with.
+- `hours` — always all 24 entries, `0`-filled for hours with no responses (unlike `daily`).
+- `weekday` — always all 7 entries, ordered Monday → Sunday.
+
 ## `GET /api/admin/responses`
 
 Paginated list of every survey respondent, newest first.

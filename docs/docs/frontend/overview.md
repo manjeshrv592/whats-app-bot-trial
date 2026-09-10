@@ -27,6 +27,7 @@ admin-frontend/src/
     api.js                    fetch wrapper for /api/admin/* + query functions
     query-client.js          React Query client instance
     utils.js                  shadcn's cn() helper
+    chart-theme.js            Shared colors/tooltip/axis style for every chart
   context/
     AuthContext.jsx           Thin wrapper around authClient.useSession()
   components/
@@ -37,10 +38,11 @@ admin-frontend/src/
     ResponseDetailSheet.jsx       Slide-over panel: full record + transcript
     WhatsAppTranscript.jsx        WhatsApp-style chat bubble transcript renderer
     StatCard.jsx / StatusBadge.jsx  Small reusable display components
+    charts/                       One component per dashboard chart (see below)
     ui/                          shadcn-generated primitives (button, table, sidebar, sheet, ...)
   pages/
     LoginPage.jsx               Split-screen login (form + branded photo panel)
-    OverviewPage.jsx             Dashboard home — stat cards
+    OverviewPage.jsx             Dashboard home — stat cards + all analytics charts
     ResponsesPage.jsx             Paginated responses table page
 ```
 
@@ -77,3 +79,9 @@ const isActive = item.to === "/" ? location.pathname === "/" : location.pathname
 ## Response detail: WhatsApp-style transcript
 
 `ResponseDetailSheet.jsx` opens a `Sheet` on row click, showing the respondent's full record plus `WhatsAppTranscript.jsx` — a deliberately literal recreation of a WhatsApp chat screen (dark header bar, wallpaper-colored chat background, green bubbles for the respondent's own messages on the right with delivery ticks, white bubbles for the bot's replies on the left), built from the same `conversationLogs` array the [admin API](../api-reference/admin-api.md) returns. This is presentation-only — it doesn't re-fetch or transform the data beyond formatting timestamps.
+
+**Shared locations render as an actual map, not raw coordinates.** `webhook.js` logs a location message as the literal text `"12.9716,77.5946"` (see [Webhook API](../api-reference/webhook-api.md)) — `WhatsAppTranscript.jsx` detects that exact `lat,lng` shape with a regex and swaps the bubble for a small stitched map image instead of showing the raw string. There's no Google Maps API key involved: it fetches a 2×2 grid of tiles directly from OpenStreetMap's standard tile server (`tile.openstreetmap.org`), computed with the Slippy Map pixel-math formula, and crops/positions them so the shared point sits exactly under a pin drawn in the center — a 2×2 tile grid is always enough to cover the fixed 220×140 thumbnail regardless of where the point falls within its home tile. Clicking the thumbnail opens the precise location in Google Maps in a new tab (`google.com/maps?q=lat,lng`), so the OSM tiles only need to be "close enough to recognize," not pixel-accurate.
+
+## Analytics charts
+
+The Overview page's charts (response volume, completion funnel, station/mode popularity, time-of-day, ...) are documented separately — see [Analytics Dashboard](./analytics-dashboard.md) for the chart component architecture and two non-obvious backend bugs their data uncovered.
