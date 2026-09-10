@@ -22,6 +22,14 @@ export function fetchResponses({ page = 1, pageSize = 25 } = {}) {
   return apiFetch(`/api/admin/responses?page=${page}&pageSize=${pageSize}`);
 }
 
+export function fetchStats() {
+  return apiFetch("/api/admin/stats");
+}
+
+export function fetchAnalytics() {
+  return apiFetch("/api/admin/analytics");
+}
+
 export function fetchResponseDetail(phoneNumber) {
   return apiFetch(`/api/admin/responses/${encodeURIComponent(phoneNumber)}`);
 }

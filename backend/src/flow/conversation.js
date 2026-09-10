@@ -6,6 +6,10 @@ const { getNearestStations } = require("./geo");
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SMART_CARD_REGEX = /^\d{11}$/;
 const MAX_ROW_TITLE_LENGTH = 24;
+// When true, a respondent who already finished (or cancelled) gets a fresh
+// survey on their next message instead of "already completed" — their old
+// answers get overwritten since each phone number has a single User row.
+const ALLOW_MULTIPLE_SUBMISSIONS = process.env.ALLOW_MULTIPLE_SUBMISSIONS === "true";
 
 // WhatsApp list row titles are capped at 24 chars; the full name always
 // survives in `description` (capped at 72) so nothing is lost either way.
@@ -259,6 +263,10 @@ async function handleIncomingMessage(phoneNumber, input) {
   const language = user.language || "en";
 
   if (currentStep === "DONE" || currentStep === "CANCELLED") {
+    if (ALLOW_MULTIPLE_SUBMISSIONS) {
+      await prisma.session.update({ where: { phoneNumber }, data: { currentStep: "ASK_LANGUAGE" } });
+      return { kind: "buttons", body: CONTENT.welcomeLanguage.body, buttons: CONTENT.welcomeLanguage.buttons };
+    }
     return textReply("alreadyCompleted", language);
   }
 

@@ -1,6 +1,7 @@
 const express = require("express");
 const prisma = require("../services/db");
 const { requireAdmin } = require("../middleware/requireAdmin");
+const { getStats, getAnalytics } = require("../services/analytics");
 
 const router = express.Router();
 router.use(requireAdmin);
@@ -11,6 +12,14 @@ function deriveStatus(currentStep) {
   if (!currentStep) return "NOT_STARTED";
   return "IN_PROGRESS";
 }
+
+router.get("/stats", async (req, res) => {
+  res.json(await getStats());
+});
+
+router.get("/analytics", async (req, res) => {
+  res.json(await getAnalytics());
+});
 
 router.get("/responses", async (req, res) => {
   const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
