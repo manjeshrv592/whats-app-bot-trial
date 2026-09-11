@@ -26,8 +26,11 @@ router.get("/responses", async (req, res) => {
   const pageSize = Math.min(Math.max(parseInt(req.query.pageSize, 10) || 25, 1), 100);
 
   const [rows, total] = await Promise.all([
+    // Most-recently-active first, not most-recently-created — a response
+    // completed yesterday should outrank someone who only said "Hi" just now
+    // and never finished.
     prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: { updatedAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
       include: { session: true },

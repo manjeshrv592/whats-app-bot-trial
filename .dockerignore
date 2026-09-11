@@ -1,0 +1,10 @@
+node_modules
+.env
+.env-old
+.env.example
+qr-code*.png
+docs/
+admin-frontend/dist
+.git
+inside-namma-transit.html
+*.pdf

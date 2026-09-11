@@ -1,4 +1,5 @@
 require("dotenv").config();
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const { toNodeHandler } = require("better-auth/node");
@@ -7,6 +8,7 @@ const webhookRouter = require("./routes/webhook");
 const adminDataRouter = require("./routes/adminData");
 
 const app = express();
+const publicDir = path.join(__dirname, "..", "public");
 
 app.use(
   cors({
@@ -23,8 +25,14 @@ app.use(express.json());
 app.use("/webhook", webhookRouter);
 app.use("/api/admin", adminDataRouter);
 
-app.get("/", (req, res) => {
-  res.send("WhatsApp trial bot is running.");
+// The admin dashboard's production build (backend/public/, added by the
+// Docker build's frontend stage — absent in local dev, where the dashboard
+// runs separately via `admin-frontend`'s own `npm run dev`).
+app.use(express.static(publicDir));
+app.get("/{*splat}", (req, res) => {
+  res.sendFile(path.join(publicDir, "index.html"), (err) => {
+    if (err) res.status(200).send("WhatsApp trial bot is running.");
+  });
 });
 
 const PORT = process.env.PORT || 3000;

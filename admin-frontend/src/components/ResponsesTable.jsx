@@ -75,7 +75,7 @@ export function ResponsesTable({ responses, onSelect }) {
               <StatusBadge status={r.status} />
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {formatDate(r.createdAt)}
+              {formatDate(r.updatedAt)}
             </TableCell>
           </TableRow>
         ))}
