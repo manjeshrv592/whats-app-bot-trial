@@ -7,10 +7,10 @@ export function ModeOfTravelChart({ data }) {
     <ChartCard title="Mode of travel" description="Getting to the station vs. from it to the destination">
       <div className="h-72 w-full">
         <ResponsiveContainer>
-          <BarChart data={data} margin={{ left: -16, right: 8, top: 8 }}>
+          <BarChart data={data} margin={{ left: 0, right: 8, top: 8 }}>
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis dataKey="label" tick={chartAxisTick} tickLine={false} axisLine={false} />
-            <YAxis tick={chartAxisTick} tickLine={false} axisLine={false} width={36} />
+            <YAxis tick={chartAxisTick} tickLine={false} axisLine={false} width={44} />
             <Tooltip contentStyle={chartTooltipStyle} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
             <Bar dataKey="feeder" name="Home → station" fill={INDIGO} radius={[4, 4, 0, 0]} />

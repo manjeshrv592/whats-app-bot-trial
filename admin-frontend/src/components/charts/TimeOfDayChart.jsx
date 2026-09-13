@@ -7,7 +7,7 @@ export function TimeOfDayChart({ data }) {
     <ChartCard title="Time of day" description="When respondents complete the survey — a proxy for actual commute times">
       <div className="h-64 w-full">
         <ResponsiveContainer>
-          <BarChart data={data} margin={{ left: -16, right: 8, top: 8 }}>
+          <BarChart data={data} margin={{ left: 0, right: 8, top: 8 }}>
             <CartesianGrid vertical={false} stroke="var(--border)" />
             <XAxis
               dataKey="hour"
@@ -17,7 +17,7 @@ export function TimeOfDayChart({ data }) {
               axisLine={false}
               interval={1}
             />
-            <YAxis tick={chartAxisTick} tickLine={false} axisLine={false} width={36} />
+            <YAxis tick={chartAxisTick} tickLine={false} axisLine={false} width={44} />
             <Tooltip
               contentStyle={chartTooltipStyle}
               labelFormatter={formatHourLabel}
