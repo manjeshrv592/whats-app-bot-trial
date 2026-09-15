@@ -93,17 +93,32 @@ async function main() {
   const delUsers = await prisma.user.deleteMany({});
   console.log("Cleared:", { logs: delLogs.count, sessions: delSessions.count, users: delUsers.count });
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Built entirely from UTC-explicit Date methods (setUTCDate, setUTCHours,
+  // getUTCDay — never the local-timezone equivalents). node-postgres writes
+  // a Date's *UTC* field values into this timezone-less `timestamp` column
+  // regardless of which machine runs this script — so if we compute "today"
+  // or an hour-of-day using local (e.g. IST) setters, the digits actually
+  // stored drift by the local UTC offset. The real ECS server always writes
+  // correct values (it runs in UTC already); this only ever bit runs of this
+  // script from a non-UTC machine. UTC-explicit construction makes the two
+  // agree unconditionally, instead of relying on whoever runs this to be on
+  // a UTC machine.
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
 
   // Build per-day counts: growth trend over 90 days + weekday-heavy + noise.
+  // Starts at `d = DAYS` (never `DAYS - 1`) so the loop stops at *yesterday*
+  // — today is deliberately never synthesized. A full day's worth of fake
+  // "commute hours" generated before today has actually finished would
+  // otherwise include timestamps later than the real current moment, so any
+  // genuine activity today would spuriously rank below fake "future" rows.
   const dayPlan = [];
-  for (let d = DAYS - 1; d >= 0; d--) {
+  for (let d = DAYS; d >= 1; d--) {
     const date = new Date(today);
-    date.setDate(date.getDate() - d);
+    date.setUTCDate(date.getUTCDate() - d);
     const progress = (DAYS - 1 - d) / (DAYS - 1); // 0 -> old, 1 -> recent
     let base = 25 + progress * 65; // grows from ~25/day to ~90/day
-    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    const isWeekend = date.getUTCDay() === 0 || date.getUTCDay() === 6;
     if (isWeekend) base *= 0.45;
     const noise = 0.75 + rand() * 0.5;
     const count = Math.max(3, Math.round(base * noise));
@@ -124,7 +139,7 @@ async function main() {
       const language = rand() < 0.3 ? "kn" : "en";
       const hour = commuteHour();
       const createdAt = new Date(date);
-      createdAt.setHours(Math.floor(hour), Math.round((hour % 1) * 60), randomInt(0, 59), 0);
+      createdAt.setUTCHours(Math.floor(hour), Math.round((hour % 1) * 60), randomInt(0, 59), 0);
 
       const name = `${pick(FIRST_NAMES)} ${pick(LAST_NAMES)}`;
       const frequency = weightedPick(FREQUENCY[language], FREQUENCY_WEIGHTS);
